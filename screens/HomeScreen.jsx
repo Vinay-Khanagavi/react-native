@@ -1,6 +1,7 @@
 import React from 'react';
 import { ImageBackground, StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+// import BackgroundDragon from '../assets/images/background_dragon.svg';
 
 const games = [
   {
@@ -28,11 +29,11 @@ const games = [
 export default function HomeScreen() {
   const navigation = useNavigation();
   return (
-    <ImageBackground
-      source={require('../assets/images/background_dragon.png')}
-      style={styles.background}
-      resizeMode="cover"
-    >
+    // <ImageBackground
+    //   source={BackgroundDragon}
+    //   style={styles.background}
+    //   resizeMode="cover"
+    // >
       <View style={styles.container}>
         <View style={styles.grid}>
           {games.map((game, idx) => (
@@ -54,7 +55,7 @@ export default function HomeScreen() {
           ))}
         </View>
       </View>
-    </ImageBackground>
+    // </ImageBackground>
   );
 }
 

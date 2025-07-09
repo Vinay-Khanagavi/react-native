@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, Animated, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import aliImg from '../assets/images/ali.jpeg';
+import anuragImg from '../assets/images/anurag.jpeg';
 
 const ORB_SIZE = 60;
 const Colors = {
@@ -80,10 +82,12 @@ const TapGame = () => {
 
   // Generate random position for orb
   const getRandomPosition = useCallback(() => {
-    const areaWidth = SCREEN_WIDTH - GAME_AREA_PADDING * 2 - ORB_SIZE;
-    const areaHeight = SCREEN_HEIGHT - 300 - GAME_AREA_PADDING * 2 - ORB_SIZE;
-    const x = Math.random() * areaWidth + GAME_AREA_PADDING;
-    const y = Math.random() * areaHeight + GAME_AREA_PADDING + 120;
+    const minX = GAME_AREA_PADDING;
+    const maxX = SCREEN_WIDTH - GAME_AREA_PADDING - ORB_SIZE;
+    const minY = GAME_AREA_PADDING + 120;
+    const maxY = SCREEN_HEIGHT - 300 - GAME_AREA_PADDING - ORB_SIZE;
+    const x = Math.random() * (maxX - minX) + minX;
+    const y = Math.random() * (maxY - minY) + minY;
     return { x, y };
   }, []);
 
@@ -308,17 +312,26 @@ const TapGame = () => {
                       styles.orb,
                       {
                         backgroundColor: currentOrb.type === 'hazard' ? '#ff4444' : 
-                                       currentOrb.type === 'bonus' ? '#ffd700' : '#00ff88',
+                                       currentOrb.type === 'bonus' ? '#ffd700' : 'transparent',
                         borderColor: currentOrb.type === 'hazard' ? '#ff6666' : 
-                                   currentOrb.type === 'bonus' ? '#ffed4a' : '#00ffaa',
+                                   currentOrb.type === 'bonus' ? '#ffed4a' : 'transparent',
+                        overflow: 'hidden',
                       }
                     ]}
                     onPress={() => handleOrbTap(currentOrb)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.orbText}>
-                      {currentOrb.type === 'hazard' ? '💀' : currentOrb.type === 'bonus' ? '⭐' : '✨'}
-                    </Text>
+                    {currentOrb.type === 'normal' ? (
+                      <Image
+                        source={Math.random() < 0.5 ? aliImg : anuragImg}
+                        style={{ width: ORB_SIZE, height: ORB_SIZE, borderRadius: ORB_SIZE / 2 }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={styles.orbText}>
+                        {currentOrb.type === 'hazard' ? '💀' : currentOrb.type === 'bonus' ? '⭐' : '✨'}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </Animated.View>
               )}
