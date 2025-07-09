@@ -6,25 +6,21 @@ const games = [
   {
     name: 'Tap Game',
     key: 'TapGame',
-    color: '#4F8EF7',
     available: true,
   },
   {
     name: 'Game 2',
     key: 'Game2',
-    color: '#34C759',
     available: false,
   },
   {
     name: 'Game 3',
     key: 'Game3',
-    color: '#FF9500',
     available: false,
   },
   {
     name: 'Game 4',
     key: 'Game4',
-    color: '#FF3B30',
     available: false,
   },
 ];
@@ -36,7 +32,7 @@ export default function HomeScreen() {
       <Text style={styles.title}>Game Hub</Text>
       <View style={styles.grid}>
         {games.map((game, idx) => (
-          <View key={game.key} style={[styles.box, { backgroundColor: game.color }]}> 
+          <View key={game.key} style={styles.box}> 
             <Text style={styles.gameName}>{game.name}</Text>
             {game.available ? (
               <TouchableOpacity
@@ -62,7 +58,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#fbfbf3',
     paddingTop: 60,
   },
   title: {
@@ -89,6 +85,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    backgroundColor: '#6f96c4',
   },
   gameName: {
     fontSize: 20,
@@ -103,7 +100,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   playButtonText: {
-    color: '#4F8EF7',
+    color: '#60534d',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -111,7 +108,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.7)',
   },
   comingSoonText: {
-    color: '#aaa',
+    color: '#60534d',
     fontSize: 16,
     fontWeight: 'bold',
   },
