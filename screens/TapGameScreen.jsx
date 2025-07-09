@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define ORB_SIZE and Colors
 const ORB_SIZE = 60;
 const Colors = {
   backgroundDark: '#1a1a1a',
