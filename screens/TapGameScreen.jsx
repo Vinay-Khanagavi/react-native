@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions } from 'react-native';
-import Colors from './Colors';
-import Orb from './Orb';
+import Colors from '../components/Colors';
+import Orb from '../components/Orb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GAME_STATES = {

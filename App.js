@@ -1,11 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
-import TapGame from './components/TapGame';
+import AppNavigator from './navigation/AppNavigator';
 
 export default function App() {
   return (
     <View style={styles.container}>
-      <TapGame />
+      <AppNavigator />
       <StatusBar style="auto" />
     </View>
   );
