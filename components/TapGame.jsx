@@ -11,9 +11,12 @@ const GAME_STATES = {
   GAME_OVER: 'game_over',
 };
 
-const ORB_SIZE = 70;
-const ORB_SPAWN_INTERVAL = 1000; // ms
-const HAZARD_CHANCE = 0.2; // 20% chance for hazard orb
+const ORB_SIZE = 500;
+const BASE_ORB_SPAWN_INTERVAL = 10000; // ms (or even 800 for very fast)
+const MIN_ORB_SPAWN_INTERVAL = 1000;   // ms
+const BASE_ORB_LIFETIME = 200;        // ms
+const MIN_ORB_LIFETIME = 100;         // ms
+const HAZARD_CHANCE = 0.5; // 20% chance for hazard orb
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GAME_AREA_PADDING = 32;
@@ -45,6 +48,22 @@ const TapGame = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState]);
 
+  // Calculate dynamic speed based on score
+  const getOrbSpawnInterval = () => {
+    // Every 5 points, decrease interval by 80ms
+    return Math.max(
+      BASE_ORB_SPAWN_INTERVAL - Math.floor(score / 5) * 80,
+      MIN_ORB_SPAWN_INTERVAL
+    );
+  };
+  const getOrbLifetime = () => {
+    // Every 5 points, decrease lifetime by 60ms
+    return Math.max(
+      BASE_ORB_LIFETIME - Math.floor(score / 5) * 60,
+      MIN_ORB_LIFETIME
+    );
+  };
+
   React.useEffect(() => {
     if (gameState !== GAME_STATES.PLAYING) {
       // Clear orbs and timeouts when not playing
@@ -54,10 +73,10 @@ const TapGame = () => {
       return;
     }
 
-    // Spawn orbs at intervals
-    const spawnInterval = setInterval(() => {
+    // Spawn orbs at dynamic intervals
+    let spawnInterval = setInterval(() => {
       spawnOrb();
-    }, ORB_SPAWN_INTERVAL);
+    }, getOrbSpawnInterval());
 
     return () => {
       clearInterval(spawnInterval);
@@ -65,24 +84,27 @@ const TapGame = () => {
       orbTimeouts.current = {};
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState]);
+  }, [gameState, score]);
 
   const spawnOrb = () => {
-    // Random position within game area
-    const areaWidth = SCREEN_WIDTH - GAME_AREA_PADDING * 2 - ORB_SIZE;
-    const areaHeight = SCREEN_HEIGHT - 200 - GAME_AREA_PADDING * 2 - ORB_SIZE; // 200 for header/footer
-    const x = Math.random() * areaWidth + GAME_AREA_PADDING;
-    const y = Math.random() * areaHeight + GAME_AREA_PADDING + 80; // 80 for header
-    const isHazard = Math.random() < HAZARD_CHANCE;
-    const id = Date.now() + Math.random();
-    const orb = { id, x, y, type: isHazard ? 'hazard' : 'normal' };
-    setOrbs((prev) => [...prev, orb]);
+    // Spawn 2 orbs per interval
+    for (let i = 0; i < 2; i++) {
+      // Random position within game area
+      const areaWidth = SCREEN_WIDTH - GAME_AREA_PADDING * 2 - ORB_SIZE;
+      const areaHeight = SCREEN_HEIGHT - 200 - GAME_AREA_PADDING * 2 - ORB_SIZE; // 200 for header/footer
+      const x = Math.random() * areaWidth + GAME_AREA_PADDING;
+      const y = Math.random() * areaHeight + GAME_AREA_PADDING + 80; // 80 for header
+      const isHazard = Math.random() < HAZARD_CHANCE;
+      const id = Date.now() + Math.random() + Math.random();
+      const orb = { id, x, y, type: isHazard ? 'hazard' : 'normal' };
+      setOrbs((prev) => [...prev, orb]);
 
-    // Remove orb after 1.2s if not tapped
-    orbTimeouts.current[id] = setTimeout(() => {
-      setOrbs((prev) => prev.filter((o) => o.id !== id));
-      // Optionally: handle miss (e.g., game over or penalty)
-    }, 1200);
+      // Remove orb after dynamic lifetime if not tapped
+      orbTimeouts.current[id] = setTimeout(() => {
+        setOrbs((prev) => prev.filter((o) => o.id !== id));
+        // Optionally: handle miss (e.g., game over or penalty)
+      }, getOrbLifetime());
+    }
   };
 
   // Placeholder handlers
