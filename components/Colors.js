@@ -9,4 +9,6 @@ const Colors = {
   neutral: '#353849',         // Neutral Gray (dividers, subtle UI)
 };
 
+export const ORB_SIZE = 70;
+
 export default Colors; 

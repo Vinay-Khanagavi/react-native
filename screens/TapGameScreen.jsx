@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions } from 'react-native';
-import Colors from '../components/Colors';
-import Orb from '../components/Orb';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Define ORB_SIZE and Colors
+const ORB_SIZE = 60;
+const Colors = {
+  backgroundDark: '#1a1a1a',
+  primaryAccent: '#00ff88',
+  textPrimary: '#ffffff',
+  textSecondary: '#cccccc',
+  neutral: '#444444',
+};
 
 const GAME_STATES = {
   START: 'start',
@@ -11,12 +19,10 @@ const GAME_STATES = {
   GAME_OVER: 'game_over',
 };
 
-const ORB_SIZE = 500;
-const BASE_ORB_SPAWN_INTERVAL = 10000; // ms (or even 800 for very fast)
-const MIN_ORB_SPAWN_INTERVAL = 1000;   // ms
-const BASE_ORB_LIFETIME = 200;        // ms
-const MIN_ORB_LIFETIME = 100;         // ms
-const HAZARD_CHANCE = 0.5; // 20% chance for hazard orb
+const ORB_LIFETIME = 2000; // 1 second exactly
+const SPAWN_DELAY = 500; // 0.5 second delay between orbs
+const HAZARD_CHANCE = 0.3; // 30% chance for red orb
+const BONUS_CHANCE = 0.2; // 20% chance for gold orbr
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GAME_AREA_PADDING = 32;
@@ -24,165 +30,329 @@ const GAME_AREA_PADDING = 32;
 const TapGame = () => {
   const [gameState, setGameState] = useState(GAME_STATES.START);
   const [score, setScore] = useState(0);
-  const [orbs, setOrbs] = useState([]);
-  const orbTimeouts = React.useRef({});
+  const [currentOrb, setCurrentOrb] = useState(null);
   const [bestScore, setBestScore] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [lives, setLives] = useState(3);
+  const [reactionTime, setReactionTime] = useState(0);
+  
+  const orbTimeout = useRef(null);
+  const spawnTimeout = useRef(null);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   // Load best score on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const loadBestScore = async () => {
       try {
         const stored = await AsyncStorage.getItem('bestScore');
         if (stored !== null) setBestScore(Number(stored));
-      } catch (e) {}
+      } catch (e) {
+        console.log('Error loading best score:', e);
+      }
     };
     loadBestScore();
   }, []);
 
   // Update best score on game over
-  React.useEffect(() => {
+  useEffect(() => {
     if (gameState === GAME_STATES.GAME_OVER && score > bestScore) {
       setBestScore(score);
       AsyncStorage.setItem('bestScore', String(score));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState]);
+  }, [gameState, score, bestScore]);
 
-  // Calculate dynamic speed based on score
-  const getOrbSpawnInterval = () => {
-    // Every 5 points, decrease interval by 80ms
-    return Math.max(
-      BASE_ORB_SPAWN_INTERVAL - Math.floor(score / 5) * 80,
-      MIN_ORB_SPAWN_INTERVAL
-    );
-  };
-  const getOrbLifetime = () => {
-    // Every 5 points, decrease lifetime by 60ms
-    return Math.max(
-      BASE_ORB_LIFETIME - Math.floor(score / 5) * 60,
-      MIN_ORB_LIFETIME
-    );
-  };
+  // Calculate level based on score
+  const getCurrentLevel = useCallback(() => {
+    return Math.floor(score / 10) + 1;
+  }, [score]);
 
-  React.useEffect(() => {
-    if (gameState !== GAME_STATES.PLAYING) {
-      // Clear orbs and timeouts when not playing
-      setOrbs([]);
-      Object.values(orbTimeouts.current).forEach(clearTimeout);
-      orbTimeouts.current = {};
-      return;
+  // Clean up timeouts
+  const cleanupTimeouts = useCallback(() => {
+    if (orbTimeout.current) {
+      clearTimeout(orbTimeout.current);
+      orbTimeout.current = null;
     }
+    if (spawnTimeout.current) {
+      clearTimeout(spawnTimeout.current);
+      spawnTimeout.current = null;
+    }
+  }, []);
 
-    // Spawn orbs at dynamic intervals
-    let spawnInterval = setInterval(() => {
-      spawnOrb();
-    }, getOrbSpawnInterval());
+  // Generate random position for orb
+  const getRandomPosition = useCallback(() => {
+    const areaWidth = SCREEN_WIDTH - GAME_AREA_PADDING * 2 - ORB_SIZE;
+    const areaHeight = SCREEN_HEIGHT - 300 - GAME_AREA_PADDING * 2 - ORB_SIZE;
+    const x = Math.random() * areaWidth + GAME_AREA_PADDING;
+    const y = Math.random() * areaHeight + GAME_AREA_PADDING + 120;
+    return { x, y };
+  }, []);
 
-    return () => {
-      clearInterval(spawnInterval);
-      Object.values(orbTimeouts.current).forEach(clearTimeout);
-      orbTimeouts.current = {};
+  // Determine orb type based on chances
+  const getOrbType = useCallback(() => {
+    const rand = Math.random();
+    if (rand < HAZARD_CHANCE) {
+      return 'hazard';
+    } else if (rand < HAZARD_CHANCE + BONUS_CHANCE) {
+      return 'bonus';
+    }
+    return 'normal';
+  }, []);
+
+  // Create new orb
+  const createOrb = useCallback(() => {
+    const position = getRandomPosition();
+    const type = getOrbType();
+    
+    return {
+      id: Date.now(),
+      x: position.x,
+      y: position.y,
+      type,
+      createdAt: Date.now(),
+      opacity: new Animated.Value(0)
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState, score]);
+  }, [getRandomPosition, getOrbType]);
 
-  const spawnOrb = () => {
-    // Spawn 2 orbs per interval
-    for (let i = 0; i < 2; i++) {
-      // Random position within game area
-      const areaWidth = SCREEN_WIDTH - GAME_AREA_PADDING * 2 - ORB_SIZE;
-      const areaHeight = SCREEN_HEIGHT - 200 - GAME_AREA_PADDING * 2 - ORB_SIZE; // 200 for header/footer
-      const x = Math.random() * areaWidth + GAME_AREA_PADDING;
-      const y = Math.random() * areaHeight + GAME_AREA_PADDING + 80; // 80 for header
-      const isHazard = Math.random() < HAZARD_CHANCE;
-      const id = Date.now() + Math.random() + Math.random();
-      const orb = { id, x, y, type: isHazard ? 'hazard' : 'normal' };
-      setOrbs((prev) => [...prev, orb]);
+  // Spawn single orb
+  const spawnOrb = useCallback(() => {
+    if (gameState !== GAME_STATES.PLAYING) return;
+    
+    const newOrb = createOrb();
+    setCurrentOrb(newOrb);
+    setLevel(getCurrentLevel());
+    
+    // Animate orb appearing
+    Animated.timing(newOrb.opacity, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+    
+    // Set timeout to remove orb after exactly 1 second
+    orbTimeout.current = setTimeout(() => {
+      // Animate orb disappearing
+      Animated.timing(newOrb.opacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        setCurrentOrb(null);
+        
+        // Penalty for missing normal orbs
+        if (newOrb.type === 'normal') {
+          setLives(prev => Math.max(0, prev - 1));
+          setCombo(0); // Reset combo
+        }
+        
+        // Schedule next orb spawn
+        spawnTimeout.current = setTimeout(() => {
+          spawnOrb();
+        }, SPAWN_DELAY);
+      });
+    }, ORB_LIFETIME);
+  }, [gameState, createOrb, getCurrentLevel]);
 
-      // Remove orb after dynamic lifetime if not tapped
-      orbTimeouts.current[id] = setTimeout(() => {
-        setOrbs((prev) => prev.filter((o) => o.id !== id));
-        // Optionally: handle miss (e.g., game over or penalty)
-      }, getOrbLifetime());
-    }
-  };
-
-  // Placeholder handlers
-  const handleStart = () => {
-    setScore(0);
-    setGameState(GAME_STATES.PLAYING);
-  };
-
-  const handlePause = () => setGameState(GAME_STATES.PAUSED);
-  const handleResume = () => setGameState(GAME_STATES.PLAYING);
-  const handleGameOver = () => setGameState(GAME_STATES.GAME_OVER);
-  const handleRetry = () => handleStart();
-
-  const handleOrbPress = (orb) => {
-    // Remove orb and clear its timeout
-    setOrbs((prev) => prev.filter((o) => o.id !== orb.id));
-    if (orbTimeouts.current[orb.id]) {
-      clearTimeout(orbTimeouts.current[orb.id]);
-      delete orbTimeouts.current[orb.id];
-    }
-    if (orb.type === 'hazard') {
-      handleGameOver();
+  // Main game loop
+  useEffect(() => {
+    if (gameState === GAME_STATES.PLAYING) {
+      // Start with first orb
+      spawnOrb();
     } else {
-      setScore((prev) => prev + 1);
+      // Clean up when not playing
+      cleanupTimeouts();
+      setCurrentOrb(null);
     }
-  };
+
+    return cleanupTimeouts;
+  }, [gameState, spawnOrb, cleanupTimeouts]);
+
+  // Check for game over
+  useEffect(() => {
+    if (lives <= 0 && gameState === GAME_STATES.PLAYING) {
+      handleGameOver();
+    }
+  }, [lives, gameState]);
+
+  // Handle orb tap
+  const handleOrbTap = useCallback((orb) => {
+    if (gameState !== GAME_STATES.PLAYING || !orb) return;
+    
+    // Calculate reaction time
+    const currentTime = Date.now();
+    const reactionTimeMs = currentTime - orb.createdAt;
+    setReactionTime(reactionTimeMs);
+    
+    // Clear timeouts
+    cleanupTimeouts();
+    
+    // Animate orb disappearing
+    Animated.timing(orb.opacity, {
+      toValue: 0,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+    
+    // Remove orb immediately
+    setCurrentOrb(null);
+    
+    // Handle different orb types
+    if (orb.type === 'hazard') {
+      // Red orb - lose life and reset combo
+      setLives(prev => Math.max(0, prev - 1));
+      setCombo(0);
+      // Screen flash effect
+      Animated.sequence([
+        Animated.timing(fadeAnim, { toValue: 0.3, duration: 100, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 100, useNativeDriver: true })
+      ]).start();
+    } else if (orb.type === 'bonus') {
+      // Gold orb - bonus points and extra life
+      const bonusPoints = reactionTimeMs < 500 ? 5 : 3;
+      setScore(prev => prev + bonusPoints);
+      setCombo(prev => prev + 1);
+      setLives(prev => Math.min(5, prev + 1));
+    } else {
+      // Normal green orb - regular points
+      const points = reactionTimeMs < 400 ? 2 : 1;
+      setScore(prev => prev + points);
+      setCombo(prev => prev + 1);
+    }
+    
+    // Schedule next orb
+    spawnTimeout.current = setTimeout(() => {
+      spawnOrb();
+    }, SPAWN_DELAY);
+  }, [gameState, cleanupTimeouts, fadeAnim, spawnOrb]);
+
+  // Game control handlers
+  const handleStart = useCallback(() => {
+    setScore(0);
+    setCombo(0);
+    setLevel(1);
+    setLives(3);
+    setReactionTime(0);
+    setCurrentOrb(null);
+    cleanupTimeouts();
+    setGameState(GAME_STATES.PLAYING);
+  }, [cleanupTimeouts]);
+
+  const handlePause = useCallback(() => {
+    setGameState(GAME_STATES.PAUSED);
+  }, []);
+
+  const handleResume = useCallback(() => {
+    setGameState(GAME_STATES.PLAYING);
+  }, []);
+
+  const handleGameOver = useCallback(() => {
+    cleanupTimeouts();
+    setGameState(GAME_STATES.GAME_OVER);
+  }, [cleanupTimeouts]);
+
+  const handleRetry = useCallback(() => {
+    handleStart();
+  }, [handleStart]);
 
   return (
     <SafeAreaView style={styles.container}>
-      {gameState === GAME_STATES.START && (
-        <View style={styles.centered}>
-          <Text style={styles.title}>Tap Reflex Challenge</Text>
-          <Text style={styles.bestScore}>Best: {bestScore}</Text>
-          <TouchableOpacity style={styles.playButton} onPress={handleStart}>
-            <Text style={styles.playButtonText}>Play</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {gameState === GAME_STATES.PLAYING && (
-        <View style={styles.gameArea}>
-          <View style={styles.header}>
-            <Text style={styles.score}>Score: {score}</Text>
-            <TouchableOpacity style={styles.pauseButton} onPress={handlePause}>
-              <Text style={styles.pauseIcon}>⏸</Text>
+      <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+        {gameState === GAME_STATES.START && (
+          <View style={styles.centered}>
+            <Text style={styles.title}>⚡ Quick Tap ⚡</Text>
+            <Text style={styles.subtitle}>One orb at a time - disappears in 1 second!</Text>
+            <Text style={styles.subtitle}>🟢 Green = +1 point</Text>
+            <Text style={styles.subtitle}>🔴 Red = -1 life</Text>
+            <Text style={styles.subtitle}>🟡 Gold = +3 points & +1 life</Text>
+            <Text style={styles.bestScore}>Best: {bestScore}</Text>
+            <TouchableOpacity style={styles.playButton} onPress={handleStart}>
+              <Text style={styles.playButtonText}>Start Game</Text>
             </TouchableOpacity>
           </View>
-          {/* Game elements: Render orbs */}
-          <View style={styles.orbArea}>
-            {orbs.map((orb) => (
-              <Orb
-                key={orb.id}
-                x={orb.x}
-                y={orb.y}
-                type={orb.type}
-                onPress={() => handleOrbPress(orb)}
-              />
-            ))}
+        )}
+        
+        {gameState === GAME_STATES.PLAYING && (
+          <View style={styles.gameArea}>
+            <View style={styles.header}>
+              <View style={styles.statsContainer}>
+                <Text style={styles.score}>Score: {score}</Text>
+                <Text style={styles.level}>Level: {level}</Text>
+                <Text style={styles.combo}>Combo: {combo}</Text>
+                <Text style={styles.reactionTime}>
+                  Last: {reactionTime}ms
+                </Text>
+              </View>
+              <View style={styles.rightHeader}>
+                <View style={styles.livesContainer}>
+                  <Text style={styles.lives}>Lives: {lives}</Text>
+                </View>
+                <TouchableOpacity style={styles.pauseButton} onPress={handlePause}>
+                  <Text style={styles.pauseIcon}>⏸</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            <View style={styles.orbArea}>
+              {currentOrb && (
+                <Animated.View
+                  style={[
+                    styles.orbContainer,
+                    {
+                      left: currentOrb.x,
+                      top: currentOrb.y,
+                      opacity: currentOrb.opacity,
+                    }
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.orb,
+                      {
+                        backgroundColor: currentOrb.type === 'hazard' ? '#ff4444' : 
+                                       currentOrb.type === 'bonus' ? '#ffd700' : '#00ff88',
+                        borderColor: currentOrb.type === 'hazard' ? '#ff6666' : 
+                                   currentOrb.type === 'bonus' ? '#ffed4a' : '#00ffaa',
+                      }
+                    ]}
+                    onPress={() => handleOrbTap(currentOrb)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.orbText}>
+                      {currentOrb.type === 'hazard' ? '💀' : currentOrb.type === 'bonus' ? '⭐' : '✨'}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+            </View>
           </View>
-        </View>
-      )}
-      {gameState === GAME_STATES.PAUSED && (
-        <View style={styles.centered}>
-          <Text style={styles.title}>Paused</Text>
-          <TouchableOpacity style={styles.playButton} onPress={handleResume}>
-            <Text style={styles.playButtonText}>Resume</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {gameState === GAME_STATES.GAME_OVER && (
-        <View style={styles.centered}>
-          <Text style={styles.title}>Game Over</Text>
-          <Text style={styles.score}>Score: {score}</Text>
-          <Text style={styles.bestScore}>Best: {bestScore}</Text>
-          <TouchableOpacity style={styles.playButton} onPress={handleRetry}>
-            <Text style={styles.playButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        )}
+        
+        {gameState === GAME_STATES.PAUSED && (
+          <View style={styles.centered}>
+            <Text style={styles.title}>Paused</Text>
+            <Text style={styles.subtitle}>Score: {score}</Text>
+            <TouchableOpacity style={styles.playButton} onPress={handleResume}>
+              <Text style={styles.playButtonText}>Resume</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {gameState === GAME_STATES.GAME_OVER && (
+          <View style={styles.centered}>
+            <Text style={styles.title}>Game Over!</Text>
+            <Text style={styles.score}>Final Score: {score}</Text>
+            <Text style={styles.level}>Level Reached: {level}</Text>
+            <Text style={styles.combo}>Best Combo: {combo}</Text>
+            <Text style={styles.reactionTime}>
+              Last Reaction: {reactionTime}ms
+            </Text>
+            <Text style={styles.bestScore}>Best: {bestScore}</Text>
+            <TouchableOpacity style={styles.playButton} onPress={handleRetry}>
+              <Text style={styles.playButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Animated.View>
     </SafeAreaView>
   );
 };
@@ -197,13 +367,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.backgroundDark,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 32,
     color: Colors.primaryAccent,
     fontWeight: 'bold',
-    marginBottom: 32,
-    letterSpacing: 1.5,
+    marginBottom: 20,
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   playButton: {
     backgroundColor: Colors.primaryAccent,
@@ -214,6 +392,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 5,
+    marginTop: 20,
   },
   playButtonText: {
     color: Colors.backgroundDark,
@@ -229,14 +408,46 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 24,
     marginBottom: 16,
   },
+  statsContainer: {
+    flex: 1,
+  },
+  rightHeader: {
+    alignItems: 'flex-end',
+  },
   score: {
     color: Colors.textPrimary,
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  level: {
+    color: Colors.primaryAccent,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  combo: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  reactionTime: {
+    color: '#ffaa00',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  livesContainer: {
+    marginBottom: 8,
+  },
+  lives: {
+    color: Colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '600',
   },
   pauseButton: {
     backgroundColor: Colors.neutral,
@@ -253,37 +464,36 @@ const styles = StyleSheet.create({
     color: Colors.primaryAccent,
     fontSize: 24,
   },
-  gamePlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    color: Colors.textSecondary,
-    fontSize: 18,
-    opacity: 0.5,
-  },
   orbArea: {
     flex: 1,
     position: 'relative',
   },
-  orb: {
+  orbContainer: {
     position: 'absolute',
     width: ORB_SIZE,
     height: ORB_SIZE,
+  },
+  orb: {
+    width: ORB_SIZE,
+    height: ORB_SIZE,
     borderRadius: ORB_SIZE / 2,
-    borderWidth: 4,
+    borderWidth: 3,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.primaryAccent,
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  orbText: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   bestScore: {
     color: Colors.textSecondary,
     fontSize: 18,
-    marginBottom: 24,
+    marginTop: 16,
     fontWeight: '600',
     letterSpacing: 1,
   },

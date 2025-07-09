@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Animated, TouchableWithoutFeedback, StyleSheet } from 'react-native';
-import Colors from './Colors';
-
-const ORB_SIZE = 70;
+import Colors, { ORB_SIZE } from './Colors';
 
 const Orb = ({ x, y, type, onPress }) => {
   const [scale] = useState(new Animated.Value(1));

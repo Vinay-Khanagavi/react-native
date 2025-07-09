@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { ImageBackground, StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const games = [
@@ -28,32 +28,42 @@ const games = [
 export default function HomeScreen() {
   const navigation = useNavigation();
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Game Hub</Text>
-      <View style={styles.grid}>
-        {games.map((game, idx) => (
-          <View key={game.key} style={styles.box}> 
-            <Text style={styles.gameName}>{game.name}</Text>
-            {game.available ? (
-              <TouchableOpacity
-                style={styles.playButton}
-                onPress={() => navigation.navigate('TapGame')}
-              >
-                <Text style={styles.playButtonText}>Play</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={[styles.playButton, styles.disabledButton]} disabled>
-                <Text style={styles.comingSoonText}>Coming Soon</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
+    <ImageBackground
+      source={require('../assets/images/background_dragon.png')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <View style={styles.grid}>
+          {games.map((game, idx) => (
+            <View key={game.key} style={styles.box}> 
+              <Text style={styles.gameName}>{game.name}</Text>
+              {game.available ? (
+                <TouchableOpacity
+                  style={styles.playButton}
+                  onPress={() => navigation.navigate('TapGame')}
+                >
+                  <Text style={styles.playButtonText}>Play</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={[styles.playButton, styles.disabledButton]} disabled>
+                  <Text style={styles.comingSoonText}>Coming Soon</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+        </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
     flex: 1,
     justifyContent: 'flex-start',
