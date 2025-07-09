@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Dimensions } from 'react-native';
 import Colors from './Colors';
 import Orb from './Orb';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GAME_STATES = {
   START: 'start',
@@ -22,6 +23,27 @@ const TapGame = () => {
   const [score, setScore] = useState(0);
   const [orbs, setOrbs] = useState([]);
   const orbTimeouts = React.useRef({});
+  const [bestScore, setBestScore] = useState(0);
+
+  // Load best score on mount
+  React.useEffect(() => {
+    const loadBestScore = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('bestScore');
+        if (stored !== null) setBestScore(Number(stored));
+      } catch (e) {}
+    };
+    loadBestScore();
+  }, []);
+
+  // Update best score on game over
+  React.useEffect(() => {
+    if (gameState === GAME_STATES.GAME_OVER && score > bestScore) {
+      setBestScore(score);
+      AsyncStorage.setItem('bestScore', String(score));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState]);
 
   React.useEffect(() => {
     if (gameState !== GAME_STATES.PLAYING) {
@@ -93,6 +115,7 @@ const TapGame = () => {
       {gameState === GAME_STATES.START && (
         <View style={styles.centered}>
           <Text style={styles.title}>Tap Reflex Challenge</Text>
+          <Text style={styles.bestScore}>Best: {bestScore}</Text>
           <TouchableOpacity style={styles.playButton} onPress={handleStart}>
             <Text style={styles.playButtonText}>Play</Text>
           </TouchableOpacity>
@@ -132,6 +155,7 @@ const TapGame = () => {
         <View style={styles.centered}>
           <Text style={styles.title}>Game Over</Text>
           <Text style={styles.score}>Score: {score}</Text>
+          <Text style={styles.bestScore}>Best: {bestScore}</Text>
           <TouchableOpacity style={styles.playButton} onPress={handleRetry}>
             <Text style={styles.playButtonText}>Retry</Text>
           </TouchableOpacity>
@@ -233,6 +257,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 6,
+  },
+  bestScore: {
+    color: Colors.textSecondary,
+    fontSize: 18,
+    marginBottom: 24,
+    fontWeight: '600',
+    letterSpacing: 1,
   },
 });
 
