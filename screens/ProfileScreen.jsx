@@ -1,29 +1,37 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import Colors from '../components/Colors';
+
+const COLORS = {
+  background: '#fbfbf3',
+  card: '#fff',
+  accent: '#6f96c4',
+  textPrimary: '#60534d',
+  textSecondary: '#6f96c4',
+  statValue: '#6f96c4',
+};
 
 export default function ProfileScreen() {
   return (
     <View style={styles.container}>
-      <View style={styles.avatarContainer}>
+      <View style={styles.card}>
         <Image
           source={require('../assets/images/background_dragon.png')}
           style={styles.avatar}
         />
-      </View>
-      <Text style={styles.username}>DragonMaster</Text>
-      <View style={styles.statsContainer}>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>1200</Text>
-          <Text style={styles.statLabel}>Score</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>7</Text>
-          <Text style={styles.statLabel}>Dragons</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>5</Text>
-          <Text style={styles.statLabel}>Achievements</Text>
+        <Text style={styles.username}>DragonMaster</Text>
+        <View style={styles.statsContainer}>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>1200</Text>
+            <Text style={styles.statLabel}>Score</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>7</Text>
+            <Text style={styles.statLabel}>Dragons</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>5</Text>
+            <Text style={styles.statLabel}>Achievements</Text>
+          </View>
         </View>
       </View>
     </View>
@@ -33,29 +41,33 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: COLORS.background,
     alignItems: 'center',
-    paddingTop: 80,
+    justifyContent: 'center',
+    paddingTop: 60,
   },
-  avatarContainer: {
-    backgroundColor: Colors.primaryAccent,
-    borderRadius: 60,
-    padding: 6,
-    marginBottom: 16,
-    shadowColor: Colors.primaryAccent,
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    width: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    borderWidth: 3,
-    borderColor: Colors.secondaryAccent,
+    borderWidth: 4,
+    borderColor: COLORS.accent,
+    marginBottom: 16,
   },
   username: {
-    color: Colors.textPrimary,
+    color: COLORS.textPrimary,
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 32,
@@ -65,27 +77,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundLight,
-    borderRadius: 24,
-    padding: 20,
-    width: '90%',
-    shadowColor: Colors.neutral,
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    width: '100%',
+    marginTop: 8,
   },
   statBox: {
     alignItems: 'center',
     marginHorizontal: 18,
   },
   statValue: {
-    color: Colors.primaryAccent,
+    color: COLORS.statValue,
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 4,
   },
   statLabel: {
-    color: Colors.textSecondary,
+    color: COLORS.textPrimary,
     fontSize: 14,
     fontWeight: '600',
   },

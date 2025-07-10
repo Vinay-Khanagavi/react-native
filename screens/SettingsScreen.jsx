@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Switch } from 'react-native';
-import Colors from '../components/Colors';
+
+const COLORS = {
+  background: '#fbfbf3',
+  card: '#fff',
+  accent: '#6f96c4',
+  textPrimary: '#60534d',
+  textSecondary: '#6f96c4',
+  thumbOn: '#6f96c4',
+  thumbOff: '#ccc',
+};
 
 export default function SettingsScreen() {
   const [sound, setSound] = useState(true);
@@ -10,32 +19,34 @@ export default function SettingsScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Settings</Text>
-      <View style={styles.section}>
-        <Text style={styles.label}>Sound</Text>
-        <Switch
-          value={sound}
-          onValueChange={setSound}
-          trackColor={{ false: Colors.neutral, true: Colors.primaryAccent }}
-          thumbColor={sound ? Colors.secondaryAccent : Colors.neutral}
-        />
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>Notifications</Text>
-        <Switch
-          value={notifications}
-          onValueChange={setNotifications}
-          trackColor={{ false: Colors.neutral, true: Colors.primaryAccent }}
-          thumbColor={notifications ? Colors.secondaryAccent : Colors.neutral}
-        />
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>Dark Mode</Text>
-        <Switch
-          value={darkMode}
-          onValueChange={setDarkMode}
-          trackColor={{ false: Colors.neutral, true: Colors.primaryAccent }}
-          thumbColor={darkMode ? Colors.secondaryAccent : Colors.neutral}
-        />
+      <View style={styles.card}>
+        <View style={styles.section}>
+          <Text style={styles.label}>Sound</Text>
+          <Switch
+            value={sound}
+            onValueChange={setSound}
+            trackColor={{ false: COLORS.thumbOff, true: COLORS.accent }}
+            thumbColor={sound ? COLORS.thumbOn : COLORS.thumbOff}
+          />
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.label}>Notifications</Text>
+          <Switch
+            value={notifications}
+            onValueChange={setNotifications}
+            trackColor={{ false: COLORS.thumbOff, true: COLORS.accent }}
+            thumbColor={notifications ? COLORS.thumbOn : COLORS.thumbOff}
+          />
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.label}>Dark Mode</Text>
+          <Switch
+            value={darkMode}
+            onValueChange={setDarkMode}
+            trackColor={{ false: COLORS.thumbOff, true: COLORS.accent }}
+            thumbColor={darkMode ? COLORS.thumbOn : COLORS.thumbOff}
+          />
+        </View>
       </View>
       <View style={styles.dragonFooter}>
         <Text style={styles.dragonText}>🐉 Dragon's Lair</Text>
@@ -47,42 +58,50 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundDark,
-    paddingTop: 80,
+    backgroundColor: COLORS.background,
+    paddingTop: 60,
     paddingHorizontal: 24,
+    alignItems: 'center',
   },
   title: {
-    color: Colors.primaryAccent,
+    color: COLORS.accent,
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 32,
     alignSelf: 'center',
     letterSpacing: 1,
   },
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 32,
+  },
   section: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundLight,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 20,
-    shadowColor: Colors.neutral,
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingVertical: 18,
   },
   label: {
-    color: Colors.textPrimary,
+    color: COLORS.textPrimary,
     fontSize: 18,
     fontWeight: '600',
   },
   dragonFooter: {
-    marginTop: 40,
+    marginTop: 20,
     alignItems: 'center',
   },
   dragonText: {
-    color: Colors.secondaryAccent,
+    color: COLORS.textSecondary,
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 1,
